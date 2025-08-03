@@ -1,10 +1,38 @@
 
+import { db } from '../db';
+import { locationsTable, categoriesTable } from '../db/schema';
 import { type GetLocationsByCategoryInput, type LocationWithCategory } from '../schema';
+import { eq } from 'drizzle-orm';
 
 export const getLocationsByCategory = async (input: GetLocationsByCategoryInput): Promise<LocationWithCategory[]> => {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is fetching locations filtered by category slug.
-    // Should join with categories table and filter by slug.
-    // Should return locations with category information included.
-    return [];
+  try {
+    const results = await db.select()
+      .from(locationsTable)
+      .innerJoin(categoriesTable, eq(locationsTable.category_id, categoriesTable.id))
+      .where(eq(categoriesTable.slug, input.category_slug))
+      .execute();
+
+    return results.map(result => ({
+      id: result.locations.id,
+      name: result.locations.name,
+      description: result.locations.description,
+      address: result.locations.address,
+      latitude: parseFloat(result.locations.latitude),
+      longitude: parseFloat(result.locations.longitude),
+      category_id: result.locations.category_id,
+      phone: result.locations.phone,
+      website: result.locations.website,
+      rating: result.locations.rating ? parseFloat(result.locations.rating) : null,
+      created_at: result.locations.created_at,
+      category: {
+        id: result.categories.id,
+        name: result.categories.name,
+        slug: result.categories.slug,
+        created_at: result.categories.created_at
+      }
+    }));
+  } catch (error) {
+    console.error('Failed to get locations by category:', error);
+    throw error;
+  }
 };

@@ -1,14 +1,33 @@
 
+import { db } from '../db';
+import { categoriesTable } from '../db/schema';
 import { type CreateCategoryInput, type Category } from '../schema';
+import { eq } from 'drizzle-orm';
 
 export const createCategory = async (input: CreateCategoryInput): Promise<Category> => {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is creating a new category and persisting it in the database.
-    // Should validate that slug is unique before creating.
-    return Promise.resolve({
-        id: 0, // Placeholder ID
+  try {
+    // Check if slug already exists
+    const existingCategory = await db.select()
+      .from(categoriesTable)
+      .where(eq(categoriesTable.slug, input.slug))
+      .execute();
+
+    if (existingCategory.length > 0) {
+      throw new Error(`Category with slug '${input.slug}' already exists`);
+    }
+
+    // Insert category record
+    const result = await db.insert(categoriesTable)
+      .values({
         name: input.name,
-        slug: input.slug,
-        created_at: new Date() // Placeholder date
-    } as Category);
+        slug: input.slug
+      })
+      .returning()
+      .execute();
+
+    return result[0];
+  } catch (error) {
+    console.error('Category creation failed:', error);
+    throw error;
+  }
 };
